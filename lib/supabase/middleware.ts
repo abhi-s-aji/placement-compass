@@ -18,12 +18,17 @@ function isNetworkError(error: any): boolean {
 }
 
 export async function updateSession(request: NextRequest, event?: any) {
+  const pathname = request.nextUrl.pathname;
+
+  // Explicit guard: NEVER intercept API routes
+  if (pathname.startsWith('/api') || pathname.startsWith('/trpc') || pathname.startsWith('/webhook')) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const publicRoutes = ['/login', '/register', '/'];
-  const isPublicRoute = publicRoutes.some(route =>
-    request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith('/api/')
-  );
+  const isPublicRoute = publicRoutes.includes(pathname);
 
   const cookiesList = request.cookies.getAll();
   const hasSessionCookie = cookiesList.some(cookie =>

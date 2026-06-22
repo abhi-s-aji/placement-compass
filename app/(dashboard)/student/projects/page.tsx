@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import ProjectsClient from '@/components/ProjectsClient';
 
 export const metadata = { title: 'Projects - Placement Compass' };
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function ProjectsPage() {
   const supabase = await createClient();

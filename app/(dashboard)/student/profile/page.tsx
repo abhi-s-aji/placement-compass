@@ -1,6 +1,7 @@
 import { createClient, getSessionUser } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import ProfileForm from '@/components/ProfileForm';
+import CertificateManager from '@/components/CertificateManager';
 import { Profile } from '@/lib/types';
 
 export const metadata = { title: 'Profile - Placement Compass' };
@@ -9,7 +10,6 @@ export default async function ProfilePage() {
   const supabase = await createClient();
   const { user } = await getSessionUser();
   if (!user) redirect('/login');
-
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
   if (!profile) redirect('/login');
@@ -26,8 +26,12 @@ export default async function ProfilePage() {
           <div className="page-section-title">Your Profile</div>
           <p className="page-section-subtitle">Keep your information up to date for accurate placement readiness tracking.</p>
         </div>
-        <ProfileForm profile={profile as Profile} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+          <ProfileForm profile={profile as Profile} />
+          <CertificateManager />
+        </div>
       </div>
     </div>
   );
 }
+

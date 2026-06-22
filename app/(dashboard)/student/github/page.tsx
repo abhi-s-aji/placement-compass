@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, startTransition } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import ScoreRing from '@/components/ScoreRing';
 import { GitHubData, GitHubRepo } from '@/lib/types';
 import { formatDate } from '@/lib/score';
+import { safeApiCall } from '@/lib/api-helper';
 
 export default function GitHubPage() {
   const [username, setUsername] = useState('');
@@ -41,34 +42,36 @@ export default function GitHubPage() {
     loadGitHubData();
   }, []);
 
-  const handleSync = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSync = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!username.trim()) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch('/api/github', {
+      const response = await safeApiCall('/api/github', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim() }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to sync GitHub profile');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to sync GitHub profile');
       }
 
       // Re-fetch to get database record format
-      const { data: dbData } = await supabase
-        .from('github_data')
-        .select('*')
-        .single();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: dbData } = await supabase
+          .from('github_data')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
 
-      if (dbData) {
-        setGithubData(dbData as GitHubData);
+        if (dbData) {
+          setGithubData(dbData as GitHubData);
+        }
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
@@ -127,7 +130,19 @@ export default function GitHubPage() {
               )}
             </button>
           </form>
-          {error && <p className="form-error mt-2">{error}</p>}
+          {error && (
+            <div className="mt-2 flex items-center gap-2">
+              <p className="form-error" style={{ margin: 0 }}>{error}</p>
+              <button
+                type="button"
+                className="btn btn-secondary btn-xs"
+                onClick={() => handleSync()}
+                style={{ padding: '2px 8px', fontSize: '10px', height: '24px' }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
           {githubData && (
             <p className="text-xs text-muted mt-2">
               Last synchronized on: {formatDate(githubData.last_fetched)}

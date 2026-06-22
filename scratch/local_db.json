@@ -1,0 +1,23 @@
+{
+  "certificates": [],
+  "target_skills": [
+    {
+      "id": "676d6a9d-771b-4092-95ad-c76fef93c2f2",
+      "user_id": "b29c9bce-523f-43de-841e-4a193c107821",
+      "skill": "React",
+      "created_at": "2026-06-22T15:47:23.707Z"
+    },
+    {
+      "id": "bf5d170a-ca07-4e61-870c-aa0ff5d4e745",
+      "user_id": "b29c9bce-523f-43de-841e-4a193c107821",
+      "skill": "Python",
+      "created_at": "2026-06-22T15:47:26.275Z"
+    }
+  ],
+  "completed_resources": [],
+  "extra_profile_details": [],
+  "aptitude_progress": [],
+  "interview_progress": [],
+  "coding_progress": [],
+  "progress": []
+}

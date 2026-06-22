@@ -72,14 +72,33 @@ export async function POST(request: NextRequest) {
     const { user } = await getSessionUser();
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({
+        success: false,
+        data: null,
+        error: 'Unauthorized'
+      }, { status: 401 });
     }
 
     const supabase = await createClient();
 
-    const { username } = await request.json();
+    let username = '';
+    try {
+      const body = await request.json();
+      username = body.username;
+    } catch (err) {
+      return NextResponse.json({
+        success: false,
+        data: null,
+        error: 'Invalid request body'
+      }, { status: 400 });
+    }
+
     if (!username) {
-      return NextResponse.json({ error: 'GitHub username is required' }, { status: 400 });
+      return NextResponse.json({
+        success: false,
+        data: null,
+        error: 'GitHub username is required'
+      }, { status: 400 });
     }
 
     const headers: Record<string, string> = {
@@ -91,48 +110,108 @@ export async function POST(request: NextRequest) {
       headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
     }
 
-    // Fetch user profile
-    const userRes = await fetch(`https://api.github.com/users/${username}`, { headers });
-    if (!userRes.ok) {
-      if (userRes.status === 404) {
-        return NextResponse.json({ error: 'GitHub user not found' }, { status: 404 });
+    let githubUser: GitHubUser | null = null;
+    let repos: GitHubRepo[] = [];
+    let recentEventCount = 0;
+    let langMap: Record<string, number> = {};
+    let topRepos: any[] = [];
+    let githubScore = 0;
+
+    let githubFetchFailed = false;
+    let githubErrorMsg = '';
+
+    try {
+      const userRes = await fetch(`https://api.github.com/users/${username}`, { headers });
+      if (!userRes.ok) {
+        githubFetchFailed = true;
+        if (userRes.status === 404) {
+          githubErrorMsg = 'GitHub user not found';
+        } else if (userRes.status === 403) {
+          githubErrorMsg = 'GitHub API rate limit exceeded. Please try again later.';
+        } else {
+          githubErrorMsg = 'GitHub API failed';
+        }
+      } else {
+        githubUser = await userRes.json();
+
+        // Fetch repos
+        const reposRes = await fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated`, { headers });
+        repos = reposRes.ok ? await reposRes.json() : [];
+
+        // Fetch recent events (for activity count)
+        const eventsRes = await fetch(`https://api.github.com/users/${username}/events/public?per_page=100`, { headers });
+        const events = eventsRes.ok ? await eventsRes.json() : [];
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        recentEventCount = events.filter((e: { created_at: string }) =>
+          new Date(e.created_at) > thirtyDaysAgo
+        ).length;
+
+        // Calculate language distribution
+        repos.forEach((r: GitHubRepo) => {
+          if (r.language) langMap[r.language] = (langMap[r.language] || 0) + 1;
+        });
+
+        topRepos = repos
+          .filter((r: GitHubRepo) => !r.fork)
+          .slice(0, 6)
+          .map((r: GitHubRepo) => ({
+            name: r.name,
+            description: r.description,
+            language: r.language,
+            stars: r.stargazers_count,
+            forks: r.forks_count,
+            updated_at: r.updated_at,
+            html_url: r.html_url,
+          }));
+
+        if (githubUser) {
+          githubScore = calculateGitHubScore(githubUser, repos, recentEventCount);
+        }
       }
-      return NextResponse.json({ error: 'GitHub API error' }, { status: 500 });
+    } catch (fetchErr) {
+      console.warn('Failed to fetch from GitHub API:', fetchErr);
+      githubFetchFailed = true;
+      githubErrorMsg = 'Network failure connecting to GitHub';
     }
-    const githubUser: GitHubUser = await userRes.json();
 
-    // Fetch repos
-    const reposRes = await fetch(`https://api.github.com/users/${username}/repos?per_page=100&sort=updated`, { headers });
-    const repos: GitHubRepo[] = reposRes.ok ? await reposRes.json() : [];
+    if (githubFetchFailed || !githubUser) {
+      // Add fallback cached profile if GitHub fails
+      const { data: cachedData } = await supabase
+        .from('github_data')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-    // Fetch recent events (for activity count)
-    const eventsRes = await fetch(`https://api.github.com/users/${username}/events/public?per_page=100`, { headers });
-    const events = eventsRes.ok ? await eventsRes.json() : [];
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const recentEventCount = events.filter((e: { created_at: string }) =>
-      new Date(e.created_at) > thirtyDaysAgo
-    ).length;
+      if (cachedData) {
+        return NextResponse.json({
+          success: true,
+          data: {
+            cached: true,
+            username: cachedData.username,
+            user: {
+              login: cachedData.username,
+              name: cachedData.username,
+              bio: cachedData.bio,
+              public_repos: cachedData.repo_count,
+              followers: cachedData.followers,
+              following: cachedData.following,
+            },
+            repos: cachedData.public_repos || [],
+            languages: cachedData.top_languages || {},
+            recentActivityCount: cachedData.recent_activity_count || 0,
+            score: cachedData.github_score || 0,
+          },
+          error: null
+        });
+      }
 
-    // Calculate language distribution
-    const langMap: Record<string, number> = {};
-    repos.forEach((r: GitHubRepo) => {
-      if (r.language) langMap[r.language] = (langMap[r.language] || 0) + 1;
-    });
-
-    const topRepos = repos
-      .filter((r: GitHubRepo) => !r.fork)
-      .slice(0, 6)
-      .map((r: GitHubRepo) => ({
-        name: r.name,
-        description: r.description,
-        language: r.language,
-        stars: r.stargazers_count,
-        forks: r.forks_count,
-        updated_at: r.updated_at,
-        html_url: r.html_url,
-      }));
-
-    const githubScore = calculateGitHubScore(githubUser, repos, recentEventCount);
+      // No cache, return error JSON
+      return NextResponse.json({
+        success: false,
+        data: null,
+        error: githubErrorMsg || 'GitHub API failed'
+      }, { status: 500 });
+    }
 
     // Save to DB
     const { error: dbError } = await supabase.from('github_data').upsert({
@@ -154,19 +233,32 @@ export async function POST(request: NextRequest) {
       // Update github_username on profile
       await supabase.from('profiles').update({ github_username: username }).eq('id', user.id);
 
-      // Update github_score in progress
-      await supabase.from('progress').update({ github_score: githubScore }).eq('user_id', user.id);
+      // Update github_score via score engine
+      try {
+        const { updateReadinessScoreAction } = await import('@/app/actions/progress');
+        await updateReadinessScoreAction('github', githubScore);
+      } catch (e) {
+        console.error('Failed to update github readiness score:', e);
+      }
     }
 
     return NextResponse.json({
-      user: githubUser,
-      repos: topRepos,
-      languages: langMap,
-      recentActivityCount: recentEventCount,
-      score: githubScore,
+      success: true,
+      data: {
+        user: githubUser,
+        repos: topRepos,
+        languages: langMap,
+        recentActivityCount: recentEventCount,
+        score: githubScore,
+      },
+      error: null
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('GitHub API error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      data: null,
+      error: err.message || 'GitHub API failed'
+    }, { status: 500 });
   }
 }

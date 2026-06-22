@@ -1,6 +1,6 @@
 import { createClient, getSessionUser } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
+import DashboardShell from '@/components/DashboardShell';
 import { Profile } from '@/lib/types';
 import { cookies } from 'next/headers';
 
@@ -103,7 +103,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center bg-zinc-950 text-zinc-100" style={{ fontFamily: 'var(--font-family)' }}>
         <div style={{ maxWidth: '480px', padding: '2rem', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)' }}>
-          <div style={{ color: 'var(--color-error)', fontSize: '2.5rem', marginBottom: '1rem' }}>⚠️</div>
+          <div style={{ color: 'var(--color-error)', fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Error</div>
           <h1 className="text-lg font-bold text-primary mb-2">Database Setup Required</h1>
           <p className="text-sm text-secondary mb-4" style={{ lineHeight: 1.6 }}>
             Your account is created but the database profile setup is incomplete. Please run migrations.
@@ -193,30 +193,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="app-shell">
-      <Sidebar profile={currentProfile as Profile} />
-      <main className="main-content">
-        {isOffline && (
-          <div style={{
-            backgroundColor: 'rgba(234, 179, 8, 0.1)',
-            border: '1px solid #eab308',
-            color: '#eab308',
-            padding: '0.75rem 1.25rem',
-            borderRadius: '6px',
-            marginBottom: '1.5rem',
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontFamily: 'var(--font-family)'
-          }}>
-            <span>⚠️</span>
-            <span>Supabase connection temporarily unavailable. Limited mode enabled.</span>
-          </div>
-        )}
-        {children}
-      </main>
-    </div>
+    <DashboardShell profile={currentProfile as Profile} isOffline={isOffline}>
+      {children}
+    </DashboardShell>
   );
 }
 

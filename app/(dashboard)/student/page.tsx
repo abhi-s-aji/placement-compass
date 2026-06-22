@@ -2,43 +2,81 @@ import { createClient, getSessionUser } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import ScoreRing from '@/components/ScoreRing';
-import ProgressBar from '@/components/ProgressBar';
-import { CATEGORY_LABELS, CATEGORY_WEIGHTS, getReadinessStatus, formatDate, getDaysUntil, getPriorityClass } from '@/lib/score';
-import { Progress, Task, Feedback, AIReport } from '@/lib/types';
+import { CATEGORY_LABELS, CATEGORY_WEIGHTS, getReadinessStatus, formatDate } from '@/lib/score';
+import { Progress, AIReport } from '@/lib/types';
 
 export const metadata = { title: 'Dashboard - Placement Compass' };
+
+function getSystemFeedback(score: number): string[] {
+  if (score >= 75) {
+    return [
+      "Your preparation is excellent! Keep maintaining consistency by reviewing your codebase, continuing mock interviews, and taking weekly contests.",
+      "Profile and GitHub presence are solid. Consider looking for premium internships or referral roles."
+    ];
+  } else if (score >= 50) {
+    return [
+      "You have made decent progress. To cross the readiness threshold, focus heavily on improving your coding platform profiles and documenting your projects.",
+      "Keep tracking your daily checklist items to ensure balanced coverage across DSA and System Design."
+    ];
+  } else {
+    return [
+      "Your readiness score is currently low. Focus on the core foundational basics: complete your personal profiles, upload a basic ATS resume, and start practicing daily coding problems.",
+      "Establish a structured learning routine. Dedicate at least 1-2 hours daily to mastering basic DSA algorithms and coding syntax."
+    ];
+  }
+}
 
 export default async function StudentDashboard() {
   const supabase = await createClient();
   const { user } = await getSessionUser();
   if (!user) redirect('/login');
 
-
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
   if (!profile || profile.role !== 'student') redirect('/login');
 
-  const [
-    { data: progress },
-    { data: tasks },
-    { data: feedback },
-    { data: aiReports },
-  ] = await Promise.all([
-    supabase.from('progress').select('*').eq('user_id', user.id).single(),
-    supabase.from('tasks').select('*, mentor:mentor_id(full_name)').eq('student_id', user.id).eq('status', 'pending').order('deadline', { ascending: true }).limit(5),
-    supabase.from('feedback').select('*, mentor:mentor_id(full_name)').eq('student_id', user.id).order('created_at', { ascending: false }).limit(3),
-    supabase.from('ai_reports').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1),
-  ]);
+  // Safely fetch database rows in parallel
+  let progress = null;
+  let todos: any[] = [];
+  let aiReports: any[] = [];
+
+  try {
+    const { getProgress } = await import('@/lib/supabase/hybrid-db');
+    let fetchedProgress = await getProgress(user.id);
+    
+    if (!fetchedProgress || !fetchedProgress.overall_score || fetchedProgress.overall_score === 0) {
+      const { updateReadinessScoreAction } = await import('@/app/actions/progress');
+      await updateReadinessScoreAction('resume', 0); // Trigger refresh mechanism
+      fetchedProgress = await getProgress(user.id); // Re-fetch
+    }
+    progress = fetchedProgress;
+
+    const [
+      todosRes,
+      aiReportsRes,
+    ] = await Promise.all([
+      supabase.from('student_todos').select('*').eq('user_id', user.id).eq('completed', false).order('created_at', { ascending: false }).limit(5),
+      supabase.from('ai_reports').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1),
+    ]);
+
+    todos = todosRes.data || [];
+    aiReports = aiReportsRes.data || [];
+  } catch (err) {
+    console.error('Failed to fetch dashboard data:', err);
+  }
 
   const scores = progress as Progress | null;
   const overallScore = scores?.overall_score ?? 0;
   const { label: statusLabel, className: statusClass } = getReadinessStatus(overallScore);
 
-  const categories = Object.keys(CATEGORY_WEIGHTS).map(cat => ({
-    key: cat,
-    label: CATEGORY_LABELS[cat],
-    score: (scores as Record<string, number> | null)?.[`${cat}_score`] ?? 0,
-    weight: CATEGORY_WEIGHTS[cat],
-  }));
+  // 'project' category is excluded from the dashboard — managed in the dedicated Projects sidebar module
+  const categories = Object.keys(CATEGORY_WEIGHTS)
+    .filter(cat => cat !== 'project')
+    .map(cat => ({
+      key: cat,
+      label: CATEGORY_LABELS[cat],
+      score: (scores as Record<string, number> | null)?.[`${cat}_score`] ?? 0,
+      weight: CATEGORY_WEIGHTS[cat],
+    }));
 
   const latestReport = aiReports?.[0] as AIReport | null;
   const profileComplete = !!(profile.full_name && profile.college && profile.department && profile.github_username);
@@ -126,98 +164,77 @@ export default async function StudentDashboard() {
         </div>
 
         <div className="grid-2" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--space-5)' }}>
-          {/* Pending Tasks */}
+          {/* Personal Tasks */}
           <div className="card">
             <div className="card-header">
               <div>
-                <div className="card-title">Assigned Tasks</div>
-                <div className="card-subtitle">Tasks from your mentor</div>
+                <div className="card-title">Personal Tasks</div>
+                <div className="card-subtitle">Your custom todo list</div>
               </div>
               <Link href="/student/tasks" className="btn btn-ghost btn-sm">View all</Link>
             </div>
 
-            {!tasks || tasks.length === 0 ? (
+            {todos.length === 0 ? (
               <div className="empty-state" style={{ padding: 'var(--space-8) 0' }}>
                 <svg className="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <div className="empty-state-title">No pending tasks</div>
-                <div className="empty-state-description">Your mentor hasn&apos;t assigned any tasks yet.</div>
+                <div className="empty-state-description">Click &quot;View all&quot; to add a custom todo.</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                {(tasks as Task[]).map(task => {
-                  const daysLeft = getDaysUntil(task.deadline);
-                  const isOverdue = daysLeft !== null && daysLeft < 0;
-
-                  return (
-                    <div
-                      key={task.id}
-                      className="flex items-start gap-3"
-                      style={{
-                        padding: 'var(--space-3)',
-                        borderRadius: 'var(--radius-md)',
-                        border: '1px solid var(--color-border-subtle)',
-                        backgroundColor: 'var(--color-bg-tertiary)',
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="text-sm font-medium text-primary truncate">{task.title}</div>
-                        <div className="flex gap-2 items-center mt-1">
-                          <span className={`badge ${getPriorityClass(task.priority)}`}>{task.priority}</span>
-                          {task.deadline && (
-                            <span className={`text-xs ${isOverdue ? 'text-error' : 'text-muted'}`}>
-                              {isOverdue ? `${Math.abs(daysLeft!)}d overdue` : `${daysLeft}d left`}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <Link href="/student/tasks" className="btn btn-ghost btn-sm" style={{ flexShrink: 0 }}>View</Link>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Recent Feedback */}
-          <div className="card">
-            <div className="card-header">
-              <div>
-                <div className="card-title">Mentor Feedback</div>
-                <div className="card-subtitle">Latest guidance from your mentor</div>
-              </div>
-            </div>
-
-            {!feedback || feedback.length === 0 ? (
-              <div className="empty-state" style={{ padding: 'var(--space-8) 0' }}>
-                <svg className="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <div className="empty-state-title">No feedback yet</div>
-                <div className="empty-state-description">Your mentor hasn&apos;t added any feedback yet.</div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                {feedback.map((fb: Feedback & { mentor?: { full_name: string } }) => (
+                {todos.map(todo => (
                   <div
-                    key={fb.id}
+                    key={todo.id}
+                    className="flex items-start gap-3"
                     style={{
                       padding: 'var(--space-3)',
                       borderRadius: 'var(--radius-md)',
-                      borderLeft: '3px solid var(--color-brand)',
-                      backgroundColor: 'var(--color-brand-subtle)',
+                      border: '1px solid var(--color-border-subtle)',
+                      backgroundColor: 'var(--color-bg-tertiary)',
                     }}
                   >
-                    <p className="text-sm text-secondary" style={{ lineHeight: 1.6 }}>{fb.message}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-muted">{fb.mentor?.full_name ?? 'Mentor'}</span>
-                      <span className="text-xs text-muted">{formatDate(fb.created_at)}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="text-sm font-medium text-primary truncate">{todo.title}</div>
+                      {todo.description && (
+                        <div className="text-xs text-muted mt-1 truncate">{todo.description}</div>
+                      )}
                     </div>
+                    <Link href="/student/tasks" className="btn btn-ghost btn-sm" style={{ flexShrink: 0 }}>View</Link>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+
+          {/* System Feedback */}
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <div className="card-title">System Feedback</div>
+                <div className="card-subtitle">Latest guidance from Placement Compass</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              {getSystemFeedback(overallScore).map((msg, index) => (
+                <div
+                  key={index}
+                  style={{
+                    padding: 'var(--space-3)',
+                    borderRadius: 'var(--radius-md)',
+                    borderLeft: '3px solid var(--color-brand)',
+                    backgroundColor: 'var(--color-brand-subtle)',
+                  }}
+                >
+                  <p className="text-sm text-secondary" style={{ lineHeight: 1.6 }}>{msg}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-muted">Placement Compass AI</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

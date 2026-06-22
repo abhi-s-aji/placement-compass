@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Project } from '@/lib/types';
+import { updateReadinessScoreAction } from '@/app/actions/progress';
 
 interface ProjectsClientProps {
   userId: string;
@@ -47,6 +49,7 @@ function TechInput({ value, onChange }: { value: string[]; onChange: (v: string[
 }
 
 export default function ProjectsClient({ userId, initialProjects }: ProjectsClientProps) {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [showModal, setShowModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -54,6 +57,10 @@ export default function ProjectsClient({ userId, initialProjects }: ProjectsClie
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setProjects(initialProjects);
+  }, [initialProjects]);
 
   function openAdd() {
     setEditingProject(null);
@@ -98,7 +105,12 @@ export default function ProjectsClient({ userId, initialProjects }: ProjectsClie
           .single();
 
         if (err) { setError(err.message); return; }
-        setProjects(prev => prev.map(p => p.id === editingProject.id ? (data as Project) : p));
+        const updatedProjects = projects.map(p => p.id === editingProject.id ? (data as Project) : p);
+        try {
+          const score = Math.min(updatedProjects.length * 33, 100);
+          await updateReadinessScoreAction('projects', score);
+        } catch (e) { console.error('Failed to update score', e); }
+        setProjects(updatedProjects);
       } else {
         const { data, error: err } = await supabase
           .from('projects')
@@ -107,10 +119,16 @@ export default function ProjectsClient({ userId, initialProjects }: ProjectsClie
           .single();
 
         if (err) { setError(err.message); return; }
-        setProjects(prev => [...prev, data as Project]);
+        const updatedProjects = [...projects, data as Project];
+        try {
+          const score = Math.min(updatedProjects.length * 33, 100);
+          await updateReadinessScoreAction('projects', score);
+        } catch (e) { console.error('Failed to update score', e); }
+        setProjects(updatedProjects);
       }
 
       closeModal();
+      router.refresh();
     });
   }
 
@@ -119,7 +137,15 @@ export default function ProjectsClient({ userId, initialProjects }: ProjectsClie
     const supabase = createClient();
     const { error: err } = await supabase.from('projects').delete().eq('id', id);
     if (!err) {
-      setProjects(prev => prev.filter(p => p.id !== id));
+      setProjects(prev => {
+        const updated = prev.filter(p => p.id !== id);
+        try {
+          const score = Math.min(updated.length * 33, 100);
+          updateReadinessScoreAction('projects', score).catch(e => console.error('Failed to update score', e));
+        } catch (e) {}
+        return updated;
+      });
+      router.refresh();
     }
     setDeleteId(null);
   }

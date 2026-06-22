@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { AIReport } from '@/lib/types';
 import { formatDate } from '@/lib/score';
+import { safeApiCall } from '@/lib/api-helper';
 
 export default function AIAnalysisPage() {
   const [reports, setReports] = useState<AIReport[]>([]);
@@ -47,16 +48,15 @@ export default function AIAnalysisPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/ai-analysis', {
+      const response = await safeApiCall('/api/ai-analysis', {
         method: 'POST',
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to generate readiness report');
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to generate readiness report');
       }
 
+      const data = response.data;
       // Prepend the new report and select it
       setReports((prev) => [data, ...prev]);
       setSelectedReport(data);

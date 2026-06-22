@@ -10,6 +10,8 @@ interface PageProps {
 }
 
 export const metadata = { title: 'Mentee Details - Placement Compass' };
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function StudentDetailPage({ params }: PageProps) {
   const resolvedParams = await params;
