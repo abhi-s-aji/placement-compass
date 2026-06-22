@@ -1,26 +1,19 @@
-import { createClient, getSessionUser } from '@/lib/supabase/server';
+import { createClient, getAuthorizedUser } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { CATEGORY_LABELS } from '@/lib/score';
 import { Progress, Profile } from '@/lib/types';
+import Unauthorized from '@/components/Unauthorized';
 
 export const metadata = { title: 'Platform Analytics - Placement Compass' };
 
 export default async function AdminAnalytics() {
-  const supabase = await createClient();
-  const { user } = await getSessionUser();
-
-  if (!user) redirect('/login');
-
-
-  const { data: adminProfile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!adminProfile || adminProfile.role !== 'admin') {
-    redirect('/login');
+  const auth = await getAuthorizedUser();
+  if (!auth) redirect('/login');
+  if (auth.role !== 'admin') {
+    return <Unauthorized />;
   }
+
+  const supabase = await createClient();
 
   // Fetch all students progress
   const [

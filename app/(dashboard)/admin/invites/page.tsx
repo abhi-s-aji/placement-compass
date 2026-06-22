@@ -1,12 +1,12 @@
 import { createClient, getAuthorizedUser } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Unauthorized from '@/components/Unauthorized';
-import UserManagementClient from '@/components/UserManagementClient';
+import InvitesClient from '@/components/InvitesClient';
 
-export const metadata = { title: 'User Management - Placement Compass' };
+export const metadata = { title: 'Mentor Invites - Placement Compass' };
 export const dynamic = 'force-dynamic';
 
-export default async function UserManagementPage() {
+export default async function MentorInvitesPage() {
   const auth = await getAuthorizedUser();
   if (!auth) redirect('/login');
   if (auth.role !== 'admin') {
@@ -14,10 +14,10 @@ export default async function UserManagementPage() {
   }
 
   const supabase = await createClient();
-  const { data: users } = await supabase
-    .from('profiles')
+  const { data: invites } = await supabase
+    .from('mentor_invites')
     .select('*')
     .order('created_at', { ascending: false });
 
-  return <UserManagementClient initialUsers={users || []} />;
+  return <InvitesClient initialInvites={invites || []} />;
 }

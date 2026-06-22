@@ -2,9 +2,8 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { Project } from '@/lib/types';
-import { updateReadinessScoreAction } from '@/app/actions/progress';
+import { addProjectAction, updateProjectAction, deleteProjectAction } from '@/app/actions/student';
 
 interface ProjectsClientProps {
   userId: string;
@@ -23,40 +22,55 @@ function TechInput({ value, onChange }: { value: string[]; onChange: (v: string[
   const [input, setInput] = useState('');
 
   function add() {
-    const t = input.trim();
-    if (t && !value.includes(t)) onChange([...value, t]);
+    const trimmed = input.trim();
+    if (trimmed && !value.includes(trimmed)) {
+      onChange([...value, trimmed]);
+    }
     setInput('');
   }
 
+  function remove(t: string) {
+    onChange(value.filter(x => x !== t));
+  }
+
   return (
-    <div className="skills-container">
+    <div className="skills-container" onClick={() => document.getElementById('tech-input')?.focus()}>
       {value.map(t => (
         <span key={t} className="skill-tag">
           {t}
-          <button type="button" className="skill-tag-remove" onClick={() => onChange(value.filter(x => x !== t))}>&times;</button>
+          <button type="button" className="skill-tag-remove" onClick={() => remove(t)}>&times;</button>
         </span>
       ))}
       <input
+        id="tech-input"
         className="skills-input"
         value={input}
         onChange={e => setInput(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add(); } }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            add();
+          }
+          if (e.key === 'Backspace' && !input && value.length > 0) {
+            remove(value[value.length - 1]);
+          }
+        }}
         onBlur={add}
-        placeholder={value.length === 0 ? 'e.g. React, Node.js, PostgreSQL...' : ''}
+        placeholder={value.length === 0 ? 'React, PostgreSQL...' : ''}
       />
     </div>
   );
 }
 
 export default function ProjectsClient({ userId, initialProjects }: ProjectsClientProps) {
-  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [showModal, setShowModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [form, setForm] = useState({ ...EMPTY_FORM });
-  const [isPending, startTransition] = useTransition();
+  const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   useEffect(() => {
     setProjects(initialProjects);
@@ -64,19 +78,19 @@ export default function ProjectsClient({ userId, initialProjects }: ProjectsClie
 
   function openAdd() {
     setEditingProject(null);
-    setForm({ ...EMPTY_FORM });
+    setForm(EMPTY_FORM);
     setError('');
     setShowModal(true);
   }
 
-  function openEdit(project: Project) {
-    setEditingProject(project);
+  function openEdit(p: Project) {
+    setEditingProject(p);
     setForm({
-      title: project.title,
-      description: project.description ?? '',
-      technologies: project.technologies ?? [],
-      github_url: project.github_url ?? '',
-      live_url: project.live_url ?? '',
+      title: p.title,
+      description: p.description ?? '',
+      technologies: p.technologies ?? [],
+      github_url: p.github_url ?? '',
+      live_url: p.live_url ?? '',
     });
     setError('');
     setShowModal(true);
@@ -84,8 +98,9 @@ export default function ProjectsClient({ userId, initialProjects }: ProjectsClie
 
   function closeModal() {
     setShowModal(false);
+    setForm(EMPTY_FORM);
     setEditingProject(null);
-    setForm({ ...EMPTY_FORM });
+    setError('');
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -94,36 +109,15 @@ export default function ProjectsClient({ userId, initialProjects }: ProjectsClie
     setError('');
 
     startTransition(async () => {
-      const supabase = createClient();
-
       if (editingProject) {
-        const { data, error: err } = await supabase
-          .from('projects')
-          .update({ ...form, updated_at: new Date().toISOString() })
-          .eq('id', editingProject.id)
-          .select()
-          .single();
-
-        if (err) { setError(err.message); return; }
-        const updatedProjects = projects.map(p => p.id === editingProject.id ? (data as Project) : p);
-        try {
-          const score = Math.min(updatedProjects.length * 33, 100);
-          await updateReadinessScoreAction('projects', score);
-        } catch (e) { console.error('Failed to update score', e); }
+        const res = await updateProjectAction(editingProject.id, form);
+        if (!res.success) { setError(res.error || 'Failed to update project.'); return; }
+        const updatedProjects = projects.map(p => p.id === editingProject.id ? (res.data as Project) : p);
         setProjects(updatedProjects);
       } else {
-        const { data, error: err } = await supabase
-          .from('projects')
-          .insert({ ...form, user_id: userId })
-          .select()
-          .single();
-
-        if (err) { setError(err.message); return; }
-        const updatedProjects = [...projects, data as Project];
-        try {
-          const score = Math.min(updatedProjects.length * 33, 100);
-          await updateReadinessScoreAction('projects', score);
-        } catch (e) { console.error('Failed to update score', e); }
+        const res = await addProjectAction(form);
+        if (!res.success) { setError(res.error || 'Failed to add project.'); return; }
+        const updatedProjects = [...projects, res.data as Project];
         setProjects(updatedProjects);
       }
 
@@ -134,17 +128,9 @@ export default function ProjectsClient({ userId, initialProjects }: ProjectsClie
 
   async function handleDelete(id: string) {
     setDeleteId(id);
-    const supabase = createClient();
-    const { error: err } = await supabase.from('projects').delete().eq('id', id);
-    if (!err) {
-      setProjects(prev => {
-        const updated = prev.filter(p => p.id !== id);
-        try {
-          const score = Math.min(updated.length * 33, 100);
-          updateReadinessScoreAction('projects', score).catch(e => console.error('Failed to update score', e));
-        } catch (e) {}
-        return updated;
-      });
+    const res = await deleteProjectAction(id);
+    if (res.success) {
+      setProjects(prev => prev.filter(p => p.id !== id));
       router.refresh();
     }
     setDeleteId(null);

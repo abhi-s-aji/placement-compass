@@ -1,16 +1,19 @@
 import { getAuthorizedUser } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import StudentsDirectoryClient from '@/components/StudentsDirectoryClient';
 
-export const metadata = { title: 'Mentees Directory - Placement Compass' };
+interface PageProps {
+  params: Promise<{ id: string }> | { id: string };
+}
+
 export const dynamic = 'force-dynamic';
 
-export default async function StudentsDirectoryPage() {
+export default async function MentorStudentRedirectPage({ params }: PageProps) {
   const auth = await getAuthorizedUser();
   if (!auth) redirect('/login');
   if (auth.role !== 'mentor' && auth.role !== 'admin') {
     redirect('/student');
   }
 
-  return <StudentsDirectoryClient />;
+  const resolvedParams = await params;
+  redirect(`/mentor/students/${resolvedParams.id}`);
 }

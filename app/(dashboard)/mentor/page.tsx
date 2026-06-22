@@ -1,4 +1,4 @@
-import { createClient, getSessionUser } from '@/lib/supabase/server';
+import { createClient, getAuthorizedUser } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Profile, Progress } from '@/lib/types';
@@ -6,19 +6,15 @@ import { Profile, Progress } from '@/lib/types';
 export const metadata = { title: 'Mentor Overview - Placement Compass' };
 
 export default async function MentorOverview() {
+  const auth = await getAuthorizedUser();
+  if (!auth) redirect('/login');
+  if (auth.role !== 'mentor' && auth.role !== 'admin') {
+    redirect('/student');
+  }
+
   const supabase = await createClient();
-  const { user } = await getSessionUser();
+  const user = auth.user;
 
-  if (!user) redirect('/login');
-
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile || profile.role !== 'mentor') redirect('/login');
 
   // Fetch all students and their scores
   const [

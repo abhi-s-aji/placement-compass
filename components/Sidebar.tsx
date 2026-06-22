@@ -204,6 +204,16 @@ const adminNav = [
       </svg>
     ),
   },
+  {
+    label: 'Invites',
+    href: '/admin/invites',
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <rect x="4" y="3" width="12" height="14" rx="1.5" />
+        <path d="M7 7h6M7 10h6M7 13h3" strokeLinecap="round" />
+      </svg>
+    ),
+  },
 ];
 
 export default function Sidebar({ profile, onClose, isOpen }: SidebarProps) {

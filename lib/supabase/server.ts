@@ -71,4 +71,31 @@ export async function createAdminClient() {
   );
 }
 
+export const getAuthorizedUser = cache(async () => {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return null;
+    }
 
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const role = (profileError || !profile) ? 'student' : (profile.role || 'student');
+    return { user, role };
+  } catch (err) {
+    console.error('[getAuthorizedUser] Error:', err);
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        return { user, role: 'student' };
+      }
+    } catch {}
+    return null;
+  }
+});

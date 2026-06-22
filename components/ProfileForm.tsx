@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { Profile } from '@/lib/types';
+import { updateProfileAction } from '@/app/actions/student';
 
 interface SkillsInputProps {
   skills: string[];
@@ -91,23 +91,19 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
     setMessage(null);
 
     startTransition(async () => {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: formData.full_name || null,
-          college: formData.college || null,
-          department: formData.department || null,
-          graduation_year: formData.graduation_year ? parseInt(formData.graduation_year) : null,
-          skills: formData.skills,
-          resume_url: formData.resume_url || null,
-          github_username: formData.github_username || null,
-          linkedin_url: formData.linkedin_url || null,
-        })
-        .eq('id', profile.id);
+      const res = await updateProfileAction({
+        full_name: formData.full_name,
+        college: formData.college,
+        department: formData.department,
+        graduation_year: formData.graduation_year ? parseInt(formData.graduation_year) : null,
+        skills: formData.skills,
+        resume_url: formData.resume_url,
+        github_username: formData.github_username,
+        linkedin_url: formData.linkedin_url,
+      });
 
-      if (error) {
-        setMessage({ type: 'error', text: 'Failed to save. Please try again.' });
+      if (!res.success) {
+        setMessage({ type: 'error', text: res.error || 'Failed to save. Please try again.' });
       } else {
         setMessage({ type: 'success', text: 'Profile saved successfully.' });
         setTimeout(() => setMessage(null), 3000);

@@ -1,27 +1,20 @@
-import { createClient, getSessionUser } from '@/lib/supabase/server';
+import { createClient, getAuthorizedUser } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Profile, Progress } from '@/lib/types';
 import { formatDate } from '@/lib/score';
+import Unauthorized from '@/components/Unauthorized';
 
 export const metadata = { title: 'Admin Overview - Placement Compass' };
 
 export default async function AdminOverview() {
-  const supabase = await createClient();
-  const { user } = await getSessionUser();
-
-  if (!user) redirect('/login');
-
-
-  const { data: adminProfile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!adminProfile || adminProfile.role !== 'admin') {
-    redirect('/login');
+  const auth = await getAuthorizedUser();
+  if (!auth) redirect('/login');
+  if (auth.role !== 'admin') {
+    return <Unauthorized />;
   }
+
+  const supabase = await createClient();
 
   // Fetch stats from all profiles and progress
   const [

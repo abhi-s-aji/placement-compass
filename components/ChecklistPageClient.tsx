@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { CHECKLIST_DEFINITIONS, CATEGORY_LABELS, CATEGORY_WEIGHTS, calculateCategoryScore, calculateOverallScore } from '@/lib/score';
+import { CHECKLIST_DEFINITIONS, CATEGORY_LABELS, CATEGORY_WEIGHTS } from '@/lib/score';
 import { ChecklistItem, TaskCategory } from '@/lib/types';
+import { toggleChecklistItemAction } from '@/app/actions/progress';
 
 interface ChecklistPageClientProps {
   userId: string;
   initialChecklist: ChecklistItem[];
   initialProgress: Record<string, number>;
+  initialOverallScore: number;
 }
 
 const CATEGORIES = Object.keys(CHECKLIST_DEFINITIONS).filter(c => c !== 'general') as TaskCategory[];
@@ -17,6 +18,7 @@ export default function ChecklistPageClient({
   userId,
   initialChecklist,
   initialProgress,
+  initialOverallScore,
 }: ChecklistPageClientProps) {
   const [completed, setCompleted] = useState<Record<string, Set<string>>>(() => {
     const map: Record<string, Set<string>> = {};
@@ -31,54 +33,33 @@ export default function ChecklistPageClient({
   });
 
   const [scores, setScores] = useState(initialProgress);
+  const [overallScore, setOverallScore] = useState(initialOverallScore);
   const [openCategory, setOpenCategory] = useState<TaskCategory | null>(CATEGORIES[0]);
   const [isPending, startTransition] = useTransition();
   const [saving, setSaving] = useState<string | null>(null);
 
-  const overallScore = calculateOverallScore(scores);
-
   async function toggleItem(category: TaskCategory, itemKey: string, isCompleted: boolean) {
     setSaving(`${category}:${itemKey}`);
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from('checklist_items')
-      .upsert({
-        user_id: userId,
-        category,
-        item_key: itemKey,
-        is_completed: isCompleted,
-        completed_at: isCompleted ? new Date().toISOString() : null,
-      }, { onConflict: 'user_id,category,item_key' });
-
-    if (error) {
-      setSaving(null);
-      return;
-    }
-
     startTransition(async () => {
-      const newCompleted = { ...completed };
-      newCompleted[category] = new Set(completed[category]);
-      if (isCompleted) {
-        newCompleted[category].add(itemKey);
-      } else {
-        newCompleted[category].delete(itemKey);
+      const res = await toggleChecklistItemAction(category as any, itemKey, isCompleted);
+      if (res.success) {
+        setCompleted(prev => {
+          const next = { ...prev };
+          next[category] = new Set(prev[category]);
+          if (isCompleted) {
+            next[category].add(itemKey);
+          } else {
+            next[category].delete(itemKey);
+          }
+          return next;
+        });
+        setScores(prev => ({
+          ...prev,
+          [category]: res.newCategoryScore ?? 0,
+        }));
+        setOverallScore(res.newOverallScore ?? 0);
       }
-      setCompleted(newCompleted);
-
-      // Recalculate scores
-      const newCategoryScore = calculateCategoryScore(category, Array.from(newCompleted[category]));
-      const newScores = { ...scores, [category]: newCategoryScore };
-      setScores(newScores);
-
-      // Update DB progress
-      const newOverall = calculateOverallScore(newScores);
-      await supabase.from('progress').upsert({
-        user_id: userId,
-        [`${category}_score`]: newCategoryScore,
-        overall_score: newOverall,
-      }, { onConflict: 'user_id' });
-
       setSaving(null);
     });
   }

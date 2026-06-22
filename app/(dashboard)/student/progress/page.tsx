@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import ChecklistPageClient from '@/components/ChecklistPageClient';
 
 export const metadata = { title: 'Progress - Placement Compass' };
+export const dynamic = 'force-dynamic';
 
 export default async function ProgressPage() {
   const supabase = await createClient();
@@ -41,6 +42,7 @@ export default async function ProgressPage() {
           userId={user.id}
           initialChecklist={checklist ?? []}
           initialProgress={progressScores}
+          initialOverallScore={progress?.overall_score ?? 0}
         />
       </div>
     </div>

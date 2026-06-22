@@ -257,3 +257,178 @@ export async function saveFullResumeDetailsAction(payload: {
   }
 }
 
+export async function addProjectAction(form: {
+  title: string;
+  description: string | null;
+  technologies: string[];
+  github_url: string | null;
+  live_url: string | null;
+}) {
+  try {
+    const user = await getRequiredUser();
+    const supabase = await createClient();
+
+    const { data: newProject, error } = await supabase
+      .from('projects')
+      .insert({
+        ...form,
+        user_id: user.id,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Fetch projects count to update score
+    const { count, error: countError } = await supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+
+    if (countError) throw countError;
+
+    const score = Math.min((count || 0) * 33, 100);
+    const { updateReadinessScoreAction } = await import('@/app/actions/progress');
+    await updateReadinessScoreAction('projects', score);
+
+    return { success: true, data: newProject };
+  } catch (err: any) {
+    console.error('[addProjectAction] Error:', err);
+    return { success: false, error: err.message || 'Failed to add project' };
+  }
+}
+
+export async function updateProjectAction(id: string, form: {
+  title: string;
+  description: string | null;
+  technologies: string[];
+  github_url: string | null;
+  live_url: string | null;
+}) {
+  try {
+    const user = await getRequiredUser();
+    const supabase = await createClient();
+
+    const { data: updatedProject, error } = await supabase
+      .from('projects')
+      .update({
+        ...form,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const { count, error: countError } = await supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+
+    if (countError) throw countError;
+
+    const score = Math.min((count || 0) * 33, 100);
+    const { updateReadinessScoreAction } = await import('@/app/actions/progress');
+    await updateReadinessScoreAction('projects', score);
+
+    return { success: true, data: updatedProject };
+  } catch (err: any) {
+    console.error('[updateProjectAction] Error:', err);
+    return { success: false, error: err.message || 'Failed to update project' };
+  }
+}
+
+export async function deleteProjectAction(id: string) {
+  try {
+    const user = await getRequiredUser();
+    const supabase = await createClient();
+
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    const { count, error: countError } = await supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+
+    if (countError) throw countError;
+
+    const score = Math.min((count || 0) * 33, 100);
+    const { updateReadinessScoreAction } = await import('@/app/actions/progress');
+    await updateReadinessScoreAction('projects', score);
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[deleteProjectAction] Error:', err);
+    return { success: false, error: err.message || 'Failed to delete project' };
+  }
+}
+
+export async function updateProfileAction(formData: {
+  full_name: string;
+  college: string;
+  department: string;
+  graduation_year: number | null;
+  skills: string[];
+  resume_url: string | null;
+  github_username: string | null;
+  linkedin_url: string | null;
+}) {
+  try {
+    const user = await getRequiredUser();
+    const supabase = await createClient();
+
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        full_name: formData.full_name || null,
+        college: formData.college || null,
+        department: formData.department || null,
+        graduation_year: formData.graduation_year || null,
+        skills: formData.skills,
+        resume_url: formData.resume_url || null,
+        github_username: formData.github_username || null,
+        linkedin_url: formData.linkedin_url || null,
+      })
+      .eq('id', user.id);
+
+    if (profileError) throw profileError;
+
+    // Recalculate resume score
+    const { data: extra } = await supabase
+      .from('extra_profile_details')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const { count: projectsCount } = await supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+
+    let resumeScore = 0;
+    if (formData.full_name) resumeScore += 10;
+    if (formData.college) resumeScore += 10;
+    if (formData.skills && formData.skills.length > 0) resumeScore += 20;
+    if (extra?.experience && (extra.experience as any[]).length > 0) resumeScore += 30;
+    if (extra?.education && (extra.education as any[]).length > 0) resumeScore += 10;
+    if ((projectsCount || 0) > 0) resumeScore += 20;
+    resumeScore = Math.min(100, resumeScore);
+
+    const { updateReadinessScoreAction } = await import('@/app/actions/progress');
+    await updateReadinessScoreAction('resume', resumeScore);
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[updateProfileAction] Error:', err);
+    return { success: false, error: err.message || 'Failed to update profile' };
+  }
+}
+

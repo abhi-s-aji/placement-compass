@@ -1,4 +1,4 @@
-import { createClient, getSessionUser } from '@/lib/supabase/server';
+import { createClient, getAuthorizedUser } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import ScoreRing from '@/components/ScoreRing';
@@ -28,11 +28,12 @@ function getSystemFeedback(score: number): string[] {
 
 export default async function StudentDashboard() {
   const supabase = await createClient();
-  const { user } = await getSessionUser();
-  if (!user) redirect('/login');
+  const auth = await getAuthorizedUser();
+  if (!auth) redirect('/login');
+  const user = auth.user;
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-  if (!profile || profile.role !== 'student') redirect('/login');
+  if (!profile) redirect('/login');
 
   // Safely fetch database rows in parallel
   let progress = null;
@@ -40,15 +41,27 @@ export default async function StudentDashboard() {
   let aiReports: any[] = [];
 
   try {
-    const { getProgress } = await import('@/lib/supabase/hybrid-db');
-    let fetchedProgress = await getProgress(user.id);
-    
-    if (!fetchedProgress || !fetchedProgress.overall_score || fetchedProgress.overall_score === 0) {
-      const { updateReadinessScoreAction } = await import('@/app/actions/progress');
-      await updateReadinessScoreAction('resume', 0); // Trigger refresh mechanism
-      fetchedProgress = await getProgress(user.id); // Re-fetch
+    const { data: progressRes } = await supabase
+      .from('progress')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!progressRes) {
+      progress = {
+        user_id: user.id,
+        resume_score: 0,
+        github_score: 0,
+        linkedin_score: 0,
+        project_score: 0,
+        coding_score: 0,
+        aptitude_score: 0,
+        interview_score: 0,
+        overall_score: 0,
+      };
+    } else {
+      progress = progressRes;
     }
-    progress = fetchedProgress;
 
     const [
       todosRes,
@@ -68,15 +81,18 @@ export default async function StudentDashboard() {
   const overallScore = scores?.overall_score ?? 0;
   const { label: statusLabel, className: statusClass } = getReadinessStatus(overallScore);
 
-  // 'project' category is excluded from the dashboard — managed in the dedicated Projects sidebar module
-  const categories = Object.keys(CATEGORY_WEIGHTS)
-    .filter(cat => cat !== 'project')
-    .map(cat => ({
+  const categories = Object.keys(CATEGORY_WEIGHTS).map(cat => {
+    const score = cat === 'projects'
+      ? (scores as Record<string, number> | null)?.project_score ?? 0
+      : (scores as Record<string, number> | null)?.[`${cat}_score`] ?? 0;
+
+    return {
       key: cat,
       label: CATEGORY_LABELS[cat],
-      score: (scores as Record<string, number> | null)?.[`${cat}_score`] ?? 0,
+      score,
       weight: CATEGORY_WEIGHTS[cat],
-    }));
+    };
+  });
 
   const latestReport = aiReports?.[0] as AIReport | null;
   const profileComplete = !!(profile.full_name && profile.college && profile.department && profile.github_username);

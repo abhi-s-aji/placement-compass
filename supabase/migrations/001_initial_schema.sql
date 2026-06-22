@@ -59,6 +59,10 @@ create policy "Mentors can view all student profiles"
   on public.profiles for select
   using (public.is_mentor_or_admin(auth.uid()));
 
+create policy "Admins can view all profiles"
+  on public.profiles for select
+  using (public.is_admin(auth.uid()));
+
 create policy "Users can update their own profile"
   on public.profiles for update
   using (auth.uid() = id);

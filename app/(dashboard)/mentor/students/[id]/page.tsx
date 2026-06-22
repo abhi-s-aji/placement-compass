@@ -1,4 +1,4 @@
-import { createClient, getSessionUser } from '@/lib/supabase/server';
+import { createClient, getAuthorizedUser } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import ScoreRing from '@/components/ScoreRing';
@@ -14,24 +14,16 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function StudentDetailPage({ params }: PageProps) {
+  const auth = await getAuthorizedUser();
+  if (!auth) redirect('/login');
+  if (auth.role !== 'mentor' && auth.role !== 'admin') {
+    redirect('/student');
+  }
+
   const resolvedParams = await params;
   const studentId = resolvedParams.id;
 
   const supabase = await createClient();
-  const { user } = await getSessionUser();
-  if (!user) redirect('/login');
-
-
-  // Verify that the caller is indeed a mentor or admin
-  const { data: mentorProfile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!mentorProfile || !['mentor', 'admin'].includes(mentorProfile.role)) {
-    redirect('/login');
-  }
 
   // Fetch all student information
   const [
@@ -69,7 +61,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
   const categories = Object.keys(CATEGORY_WEIGHTS).map((cat) => {
     const items = CHECKLIST_DEFINITIONS[cat as keyof typeof CHECKLIST_DEFINITIONS] || [];
     const completedCount = items.filter((item) => completedKeysSet.has(`${cat}:${item.key}`)).length;
-    const catScore = (sProgress as Record<string, number> | null)?.[`${cat}_score`] ?? 0;
+    const catScore = (sProgress as Record<string, number> | null)?.[cat === 'projects' ? 'project_score' : `${cat}_score`] ?? 0;
 
     return {
       key: cat,

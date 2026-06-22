@@ -1,6 +1,9 @@
 import { updateSession } from '@/lib/supabase/middleware';
 import { type NextRequest } from 'next/server';
 
+/**
+ * Custom Next.js version proxy middleware to refresh cookies.
+ */
 export async function proxy(request: NextRequest, event: any) {
   return await updateSession(request, event);
 }
