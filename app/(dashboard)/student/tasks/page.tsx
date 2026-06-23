@@ -16,6 +16,17 @@ interface StudentTodo {
 
 const AVAILABLE_TAGS = ['Python', 'Java', 'Web', 'DSA', 'System Design', 'General'];
 
+function generateUUID() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 export default function TasksPage() {
   const [todos, setTodos] = useState<StudentTodo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,8 +46,15 @@ export default function TasksPage() {
     async function initTodos() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          throw new Error('No user session found');
+        }
         setUserId(user.id);
+        try {
+          localStorage.setItem('sb-current-user', JSON.stringify({ id: user.id }));
+        } catch (e) {
+          console.error('Failed to cache user ID:', e);
+        }
 
         // Fetch from Supabase
         const { data, error } = await supabase
@@ -68,7 +86,8 @@ export default function TasksPage() {
           console.error('Failed to parse cached user:', e);
         }
 
-        const activeId = user_id_hack || localUser;
+        const activeId = user_id_hack || localUser || 'offline-user';
+        setUserId(activeId);
         if (activeId) {
           try {
             const localData = localStorage.getItem(`student_todos_${activeId}`);
@@ -128,7 +147,7 @@ export default function TasksPage() {
     if (!newTitle.trim() || !userId) return;
 
     const newTodo: StudentTodo = {
-      id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+      id: generateUUID(),
       user_id: userId,
       title: newTitle.trim(),
       description: newDesc.trim(),
