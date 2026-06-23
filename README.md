@@ -2,7 +2,6 @@
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://placement-compass.vercel.app)
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-black?logo=github)](https://github.com/abhi-s-aji/placement-compass)
-[![License](https://img.shields.io/badge/License-MIT-blue)](#license)
 
 ---
 
