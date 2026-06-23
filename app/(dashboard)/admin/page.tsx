@@ -18,13 +18,17 @@ export default async function AdminOverview() {
 
   const supabase = await createClient();
 
-  // Fetch stats from all profiles and progress
+  // Fetch stats from all profiles, progress, mentor requests, and mock interviews
   const [
     { data: profiles },
     { data: progressList },
+    { data: pendingRequests },
+    { data: interviewSessions },
   ] = await Promise.all([
     supabase.from('profiles').select('*').order('created_at', { ascending: false }),
     supabase.from('progress').select('*'),
+    supabase.from('mentor_requests').select('id').eq('status', 'pending'),
+    supabase.from('mock_interview_sessions').select('id'),
   ]);
 
   const allProfiles = (profiles || []) as Profile[];
@@ -44,6 +48,10 @@ export default async function AdminOverview() {
   const goodCount = allProgress.filter(p => p.overall_score >= 60 && p.overall_score < 80).length;
   const progressCount = allProgress.filter(p => p.overall_score >= 40 && p.overall_score < 60).length;
   const needsWorkCount = allProgress.filter(p => p.overall_score < 40).length;
+
+  const pendingRequestsCount = pendingRequests?.length || 0;
+  const interviewSessionsCount = interviewSessions?.length || 0;
+  const assignedStudentsCount = allProfiles.filter(p => p.role === 'student' && p.mentor_id).length;
 
   const recentUsers = allProfiles.slice(0, 5);
 
@@ -86,6 +94,41 @@ export default async function AdminOverview() {
               {averageScore}%
             </span>
             <span className="stat-change">Average readiness score</span>
+          </div>
+        </div>
+
+        {/* Additional Collaboration Stats */}
+        <div className="grid-4 mb-6" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
+          <div className="stat-card">
+            <span className="stat-label">Pending Mentor Requests</span>
+            <span className="stat-value" style={{ color: pendingRequestsCount > 0 ? 'var(--color-warning)' : 'inherit' }}>
+              {pendingRequestsCount}
+            </span>
+            <span className="stat-change">Awaiting admin review</span>
+          </div>
+
+          <div className="stat-card">
+            <span className="stat-label">Assigned Mentees</span>
+            <span className="stat-value">{assignedStudentsCount}</span>
+            <span className="stat-change">Students mapped to mentors</span>
+          </div>
+
+          <div className="stat-card">
+            <span className="stat-label">Mock Interview Rounds</span>
+            <span className="stat-value">{interviewSessionsCount}</span>
+            <span className="stat-change">Completed by students</span>
+          </div>
+          
+          <div className="stat-card flex flex-col justify-center" style={{ minHeight: '100px', padding: 'var(--space-3) var(--space-4)' }}>
+            <span className="stat-label mb-2">Quick Navigation</span>
+            <div className="flex gap-2">
+              <Link href="/admin/mentor-requests" className="btn btn-secondary btn-xs" style={{ fontSize: '10px', textDecoration: 'none' }}>
+                Requests &rarr;
+              </Link>
+              <Link href="/admin/students" className="btn btn-secondary btn-xs" style={{ fontSize: '10px', textDecoration: 'none' }}>
+                Students &rarr;
+              </Link>
+            </div>
           </div>
         </div>
 

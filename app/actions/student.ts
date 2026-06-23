@@ -432,3 +432,89 @@ export async function updateProfileAction(formData: {
   }
 }
 
+// ----------------------------------------------------
+// MENTOR COMMUNICATION — Student side
+// ----------------------------------------------------
+
+/**
+ * Student sends a message to their assigned mentor.
+ * Uses the existing feedback table with type='student' to avoid creating a new table.
+ */
+export async function sendStudentMessageAction(message: string) {
+  try {
+    const user = await getRequiredUser();
+    const supabase = await createClient();
+
+    // Get assigned mentor from profiles
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('mentor_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) throw new Error('Could not fetch your profile.');
+    const mentorId = (profile as any).mentor_id as string | null;
+    if (!mentorId) throw new Error('You do not have an assigned mentor yet.');
+
+    const { data, error } = await supabase
+      .from('feedback')
+      .insert({
+        mentor_id: mentorId,
+        student_id: user.id,
+        message: `Reply: ${message}`,
+        type: 'student',
+        category: null,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { success: true, data };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+// ----------------------------------------------------
+// COURSE SUGGESTIONS — Mentor side action (called from CourseSuggestionsClient)
+// ----------------------------------------------------
+
+/**
+ * Mentor suggests a course to a student.
+ * Stored in feedback table with type='suggestion' and suggestion_details JSONB.
+ */
+export async function suggestCourseAction(
+  studentId: string,
+  title: string,
+  platform: string,
+  url: string,
+  category: string,
+  comment: string
+) {
+  try {
+    const user = await getRequiredUser();
+    const supabase = await createClient();
+
+    const messageText = comment.trim()
+      ? comment.trim()
+      : `Course Suggestion: ${title} on ${platform}`;
+
+    const { data, error } = await supabase
+      .from('feedback')
+      .insert({
+        mentor_id: user.id,
+        student_id: studentId,
+        message: messageText,
+        category: category || null,
+        type: 'suggestion',
+        suggestion_details: { title, platform, url },
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { success: true, data };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}

@@ -20,6 +20,7 @@ export interface Profile {
   linkedin_url: string | null;
   avatar_url: string | null;
   is_active: boolean;
+  mentor_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -111,6 +112,13 @@ export interface Feedback {
   student_id: string;
   message: string;
   category: TaskCategory | null;
+  type?: 'feedback' | 'suggestion' | 'student';
+  suggestion_details?: {
+    title?: string;
+    platform?: string;
+    url?: string;
+    [key: string]: unknown;
+  } | null;
   created_at: string;
   mentor?: Profile;
   student?: Profile;
@@ -140,4 +148,73 @@ export interface ChecklistDefinition {
   key: string;
   label: string;
   description: string;
+}
+
+export type MentorRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface MentorRequest {
+  id: string;
+  student_id: string;
+  requested_mentor_id: string;
+  mentor_id?: string | null;
+  message: string | null;
+  status: MentorRequestStatus;
+  created_at: string;
+  updated_at: string;
+  student?: Profile;
+  mentor?: Profile;
+}
+
+export interface MockInterviewSession {
+  id: string;
+  user_id: string;
+  company: string;
+  category: string;
+  completed_questions: number;
+  total_questions: number;
+  score: number;
+  completed: boolean;
+  created_at: string;
+  updated_at: string;
+  evaluation_score?: number;
+  evaluation_level?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  improvement_tips?: string[];
+  interviewer_feedback?: string;
+  question_text?: string;
+  answer_text?: string;
+}
+
+export type InterviewCategory = 'DSA' | 'System Design' | 'DBMS' | 'OS' | 'Computer Networks' | 'OOP' | 'HR' | 'Projects';
+
+export interface InterviewQuestion {
+  id: string;
+  question: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  category: InterviewCategory;
+  company?: string;
+  hint?: string;
+  sampleAnswer?: string;
+  expected_concepts?: string[];
+  key_points?: string[];
+  common_mistakes?: string[];
+  explanation?: string;
+}
+
+export interface InterviewRound {
+  name: string;
+  category: InterviewCategory;
+  description: string;
+  questions: InterviewQuestion[];
+}
+
+export interface CompanyInterview {
+  company: string;
+  logo?: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  description: string;
+  process: string;
+  rounds: InterviewRound[];
+  tips: string[];
 }

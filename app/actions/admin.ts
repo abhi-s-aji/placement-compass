@@ -98,3 +98,30 @@ export async function updateUserStatusAction(userId: string, isActive: boolean) 
 
   return { success: true };
 }
+
+/**
+ * Admin assigns or unassigns a mentor to a student.
+ * Uses the existing mentor_id column on profiles (added in migration 008).
+ */
+export async function assignStudentToMentorAction(studentId: string, mentorId: string | null) {
+  const auth = await getAuthorizedUser();
+  if (!auth) throw new Error('Unauthorized');
+  if (auth.role !== 'admin') throw new Error('Forbidden');
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ mentor_id: mentorId })
+    .eq('id', studentId);
+
+  if (error) {
+    console.error('[assignStudentToMentorAction] Error:', error);
+    throw new Error(error.message);
+  }
+
+  revalidatePath('/admin/mentor-assignment');
+  revalidatePath('/admin');
+  revalidatePath('/mentor');
+  return { success: true };
+}

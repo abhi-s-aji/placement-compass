@@ -1,0 +1,94 @@
+/* ============================================================
+   DOCK — macOS-style navigation dock
+   Stable positioning, no vibration, GPU-composited
+   ============================================================ */
+
+.dock-outer {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.dock-panel {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 8px 12px 10px;
+  border-radius: 18px;
+  background-color: rgba(10, 10, 12, 0.92);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  pointer-events: auto;
+}
+
+.dock-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  outline: none;
+  color: var(--color-text-secondary, #a1a1aa);
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  will-change: transform, width, height;
+}
+
+.dock-item:hover,
+.dock-item:focus-visible {
+  color: var(--color-text-primary, #f4f4f5);
+  border-color: rgba(99, 102, 241, 0.4);
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+.dock-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dock-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.dock-label {
+  position: absolute;
+  top: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  white-space: nowrap;
+  border-radius: 8px;
+  background-color: rgba(10, 10, 12, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--color-text-primary, #f4f4f5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+/* Hide dock on mobile */
+@media (max-width: 768px) {
+  .dock-outer {
+    display: none !important;
+  }
+}

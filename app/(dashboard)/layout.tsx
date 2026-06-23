@@ -36,6 +36,7 @@ function fallbackSessionExists(cookieStore: any): Profile {
     linkedin_url: null,
     avatar_url: null,
     is_active: true,
+    mentor_id: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -187,6 +188,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       linkedin_url: null,
       avatar_url: null,
       is_active: true,
+      mentor_id: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

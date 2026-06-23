@@ -39,6 +39,8 @@ export default async function StudentDashboard() {
   let progress = null;
   let todos: any[] = [];
   let aiReports: any[] = [];
+  let suggestions: any[] = [];
+  let mentorProfile: any = null;
 
   try {
     const { data: progressRes } = await supabase
@@ -66,13 +68,19 @@ export default async function StudentDashboard() {
     const [
       todosRes,
       aiReportsRes,
+      suggestionsRes,
+      mentorRes,
     ] = await Promise.all([
       supabase.from('student_todos').select('*').eq('user_id', user.id).eq('completed', false).order('created_at', { ascending: false }).limit(5),
       supabase.from('ai_reports').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1),
+      supabase.from('feedback').select('*, mentor:mentor_id(full_name)').eq('student_id', user.id).eq('type', 'suggestion').order('created_at', { ascending: false }).limit(5),
+      profile.mentor_id ? supabase.from('profiles').select('*').eq('id', profile.mentor_id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
 
     todos = todosRes.data || [];
     aiReports = aiReportsRes.data || [];
+    suggestions = suggestionsRes.data || [];
+    mentorProfile = mentorRes.data || null;
   } catch (err) {
     console.error('Failed to fetch dashboard data:', err);
   }
@@ -294,6 +302,102 @@ export default async function StudentDashboard() {
             </div>
           </div>
         )}
+
+        {/* Mentor & Recommendations Section */}
+        <div className="grid-2 mt-5" style={{ gridTemplateColumns: '1fr 1.5fr', gap: 'var(--space-5)', alignItems: 'start' }}>
+          {/* Assigned Mentor Card */}
+          <div className="card">
+            <h3 className="card-title mb-2">Mentor</h3>
+            {mentorProfile ? (
+              <div className="flex flex-col gap-3 mt-3">
+                <div className="flex items-start gap-3">
+                  <div className="sidebar-user-avatar" style={{ width: 36, height: 36, fontSize: '10px', flexShrink: 0 }}>
+                    {(mentorProfile.full_name || mentorProfile.email)
+                      .split(' ')
+                      .map((n: string) => n[0])
+                      .join('')
+                      .toUpperCase()
+                      .slice(0, 2)}
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-primary">{mentorProfile.full_name || 'N/A'}</div>
+                    <div className="text-xs text-muted mb-1">{mentorProfile.email}</div>
+                    <div className="text-xs text-secondary">
+                      <strong>Expertise:</strong> {mentorProfile.department || 'General'}
+                      {mentorProfile.skills && mentorProfile.skills.length > 0 ? ` (${mentorProfile.skills.slice(0, 3).join(', ')})` : ''}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Link href="/student/mentor-request?tab=messages" className="btn btn-secondary btn-xs flex-1" style={{ textDecoration: 'none', justifyContent: 'center' }}>
+                    Message Mentor
+                  </Link>
+                  <Link href="/student/mentor-request?tab=recommendations" className="btn btn-primary btn-xs flex-1" style={{ textDecoration: 'none', justifyContent: 'center' }}>
+                    View Recommendations
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2">
+                <p className="text-xs text-muted mb-3">You do not have a mentor assigned yet.</p>
+                <Link href="/student/mentor-request" className="btn btn-primary btn-sm btn-full" style={{ justifyContent: 'center', textDecoration: 'none' }}>
+                  Request Mentor
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Mentor Suggestions (Course suggestions) */}
+          <div className="card">
+            <h3 className="card-title mb-2">Mentor Recommendations</h3>
+            <p className="card-subtitle mb-4">Targeted courses and resources recommended by your mentor</p>
+            {suggestions.length === 0 ? (
+              <p className="text-xs text-muted italic">No active recommendations or course suggestions from your mentor.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                {suggestions.map((s) => {
+                  const details = s.suggestion_details;
+                  return (
+                    <div
+                      key={s.id}
+                      style={{
+                        padding: 'var(--space-3)',
+                        borderRadius: 'var(--radius-md)',
+                        borderLeft: '3px solid var(--color-info)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                      }}
+                    >
+                      <div className="flex justify-between items-start gap-2 mb-1">
+                        <span className="badge badge-info" style={{ fontSize: '9px' }}>
+                          {details?.platform || 'Course Recommendation'}
+                        </span>
+                        <span className="text-xs text-muted" style={{ fontSize: '9px' }}>
+                          {formatDate(s.created_at)}
+                        </span>
+                      </div>
+                      <div className="text-sm font-semibold text-primary mb-1">
+                        {details?.title || s.message}
+                      </div>
+                      {details?.url && (
+                        <a
+                          href={details.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs link font-semibold"
+                        >
+                          Access Course &rarr;
+                        </a>
+                      )}
+                      {s.message && s.message !== `Course Suggestion: ${details?.title} on ${details?.platform}` && (
+                        <p className="text-xs text-secondary mt-1">{s.message}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

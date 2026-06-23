@@ -126,6 +126,24 @@ const studentNav = [
       </svg>
     ),
   },
+  {
+    label: 'Mentor Panel',
+    href: '/student/mentor-request',
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Mock Interview',
+    href: '/student/mock-interview',
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
 ];
 
 const mentorNav = [
@@ -170,6 +188,16 @@ const mentorNav = [
       </svg>
     ),
   },
+  {
+    label: 'Mentor Panel',
+    href: '/mentor/panel',
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <rect x="3" y="3" width="14" height="14" rx="2" />
+        <path d="M9 3v14M3 9h14" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
 ];
 
 const adminNav = [
@@ -211,6 +239,24 @@ const adminNav = [
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75">
         <rect x="4" y="3" width="12" height="14" rx="1.5" />
         <path d="M7 7h6M7 10h6M7 13h3" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Admin Mentor Requests',
+    href: '/admin/mentor-requests',
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Students',
+    href: '/admin/students',
+    icon: (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0-.001h6v-1a6 6 0 00-9-5.197" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },

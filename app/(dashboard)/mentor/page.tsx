@@ -18,15 +18,17 @@ export default async function MentorOverview() {
   const user = auth.user;
 
 
-  // Fetch all students and their scores
+  // Fetch all students, scores, tasks, and feedback suggestions
   const [
     { data: students },
     { data: progressList },
     { data: tasks },
+    { data: suggestions },
   ] = await Promise.all([
     supabase.from('profiles').select('*').eq('role', 'student').order('full_name', { ascending: true }),
     supabase.from('progress').select('*'),
     supabase.from('tasks').select('*').eq('mentor_id', user.id),
+    supabase.from('feedback').select('id, student_id').eq('mentor_id', user.id).eq('type', 'suggestion'),
   ]);
 
   const studentsCount = students?.length ?? 0;
@@ -46,6 +48,20 @@ export default async function MentorOverview() {
       overallScore: studentProgress?.overall_score ?? 0,
     };
   }).sort((a, b) => b.overallScore - a.overallScore); // Sort by highest score first
+
+  // Compute assigned students list
+  const assignedStudents = (students || []).filter(s => s.mentor_id === user.id);
+  const assignedSummaries = assignedStudents.map(student => {
+    const studentProgress = scores.find(s => s.user_id === student.id);
+    const studentTasks = (tasks || []).filter(t => t.student_id === student.id);
+    const studentSuggestionsCount = (suggestions || []).filter(s => s.student_id === student.id).length;
+    return {
+      profile: student as Profile,
+      overallScore: studentProgress?.overall_score ?? 0,
+      tasksCount: studentTasks.length,
+      suggestionsCount: studentSuggestionsCount,
+    };
+  });
 
   return (
     <div className="animate-fade-in">
@@ -143,6 +159,76 @@ export default async function MentorOverview() {
                           {overallScore}%
                         </span>
                         <div className="text-xs text-muted">Readiness</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Mentor Panel Section */}
+          <div className="card mt-6">
+            <div className="card-header" style={{ flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+              <div>
+                <h3 className="card-title">Mentor Panel</h3>
+                <p className="card-subtitle">Manage assigned students, communication, course suggestions, and feedback</p>
+              </div>
+              <div className="flex gap-2">
+                <Link href="/mentor/panel?tab=students" className="btn btn-secondary btn-xs" style={{ textDecoration: 'none' }}>Students</Link>
+                <Link href="/mentor/panel?tab=messages" className="btn btn-secondary btn-xs" style={{ textDecoration: 'none' }}>Messages</Link>
+                <Link href="/mentor/panel?tab=recommendations" className="btn btn-secondary btn-xs" style={{ textDecoration: 'none' }}>Suggestions</Link>
+                <Link href="/mentor/feedback" className="btn btn-secondary btn-xs" style={{ textDecoration: 'none' }}>Feedback</Link>
+              </div>
+            </div>
+
+            {assignedSummaries.length === 0 ? (
+              <div className="empty-state" style={{ padding: 'var(--space-6) 0' }}>
+                <div className="empty-state-title">No assigned students</div>
+                <div className="empty-state-description">Students will show up here once assigned by the administrator.</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                {assignedSummaries.map(({ profile: s, overallScore, tasksCount, suggestionsCount }) => {
+                  const initials = (s.full_name || s.email).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                  return (
+                    <div
+                      key={s.id}
+                      style={{
+                        padding: 'var(--space-3)',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--color-border-subtle)',
+                        backgroundColor: 'var(--color-bg-tertiary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="sidebar-user-avatar" style={{ width: 32, height: 32, fontSize: 'var(--font-size-xs)' }}>
+                          {initials}
+                        </div>
+                        <div>
+                          <Link href={`/mentor/students/${s.id}`} className="text-sm font-semibold text-primary hover:underline">
+                            {s.full_name || s.email}
+                          </Link>
+                          <div className="text-xs text-muted" style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+                            <span>Tasks: <strong>{tasksCount}</strong></span>
+                            <span>&bull;</span>
+                            <span>Courses: <strong>{suggestionsCount}</strong></span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <span className="text-sm font-bold" style={{ color: overallScore >= 80 ? 'var(--color-success)' : overallScore >= 60 ? 'var(--color-info)' : overallScore >= 40 ? 'var(--color-warning)' : 'var(--color-error)' }}>
+                            {overallScore}%
+                          </span>
+                          <div className="text-xs text-muted" style={{ fontSize: '9px' }}>Readiness</div>
+                        </div>
+                        <Link href={`/mentor/panel?tab=messages`} className="btn btn-secondary btn-sm" style={{ padding: '4px 8px', fontSize: '11px', textDecoration: 'none' }}>
+                          Chat
+                        </Link>
                       </div>
                     </div>
                   );
