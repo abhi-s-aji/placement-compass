@@ -1,6 +1,15 @@
 # Placement Compass
 
-Live Demo: https://placement-compass.vercel.app
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://placement-compass.vercel.app)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?logo=github)](https://github.com/abhi-s-aji/placement-compass)
+[![License](https://img.shields.io/badge/License-MIT-blue)](#license)
+
+---
+
+## Live Application
+
+Access the platform here:  
+**[Placement Compass](https://placement-compass.vercel.app)**
 
 ---
 
@@ -16,20 +25,20 @@ The platform combines deterministic evaluation logic, AI assistance (Google Gemi
 
 ## Problem Statement
 
-Most students preparing for placements struggle with:
+Most students preparing for placements face challenges such as:
 
 - Lack of structured preparation tracking
-- No clear understanding of skill gaps
+- No clear visibility into skill gaps
 - No centralized system for progress monitoring
-- Limited mentor guidance and feedback loops
+- Limited mentor feedback and guidance
 
-Placement Compass solves this by building a unified ecosystem that continuously evaluates and improves student readiness.
+Placement Compass solves this by building a unified and structured preparation ecosystem.
 
 ---
 
 ## Core Objective
 
-To provide a structured, intelligent, and scalable placement preparation system that:
+To build an intelligent placement preparation system that:
 
 - Tracks student readiness across multiple skill dimensions
 - Provides actionable improvement plans
@@ -61,22 +70,22 @@ Each dimension contributes to a unified placement readiness score.
 - Real-time placement readiness dashboard
 - Category-wise performance breakdown
 - Interactive checklist-based progress tracking
-- Dynamic score recalculation engine
+- Dynamic scoring engine with real-time updates
 - GitHub profile integration and repository analysis
 - Projects portfolio with GitHub and live demo support
-- AI-generated readiness reports including:
+- AI-generated readiness reports:
   - Strength analysis
   - Weakness identification
   - Root cause breakdown
-  - 30-day structured improvement roadmap
-- Resume builder with structured sections and print-ready output
+  - 30-day improvement roadmap
+- Resume builder with structured sections and export support
 - Mock interview system covering:
   - DSA fundamentals
   - System design basics
-  - OS, DBMS, and networking concepts
-  - Behavioral interview questions
+  - OS, DBMS, networking
+  - Behavioral questions
 - Certificate management system
-- Mentor request and mapping system
+- Mentor request system
 - Task and todo management system
 - Mentor feedback tracking system
 
@@ -89,33 +98,31 @@ Each dimension contributes to a unified placement readiness score.
 - Student filtering and search tools
 - Individual student deep-dive profiles
 - Task assignment system with priority and deadlines
-- Feedback and learning recommendations system
-- Direct communication with students
+- Feedback and learning recommendations
+- Direct communication system
 
 ---
 
 ### Admin Features
 
-- Complete user management system (students, mentors, admins)
+- User management system (students, mentors, admins)
 - Mentor request approval workflow
-- Invite code generation and management system
+- Invite code management system
 - Platform-wide analytics dashboard
-- Cohort and department-level performance tracking
-- System monitoring and oversight tools
+- Cohort and department-level tracking
+- System monitoring and control tools
 
 ---
 
 ## System Architecture
 
-Placement Compass is built using a modern full-stack architecture:
-
-- Next.js App Router for frontend and backend routing
-- Supabase for authentication, database, and Row Level Security (RLS)
-- Server Actions for secure backend mutations
-- Google Gemini API for AI-driven insights and reports
-- Deterministic scoring engine for consistent evaluation
+- Next.js App Router for frontend + backend routing
+- Supabase for authentication, database, and RLS security
+- Server Actions for backend operations
+- Google Gemini API for AI-driven insights
+- Deterministic scoring engine for evaluation
 - Hybrid fallback system using local JSON storage
-- Resume parsing system using PDF and DOCX support (partially integrated)
+- Resume parsing system (PDF + DOCX support)
 
 ---
 
@@ -128,79 +135,73 @@ Placement Compass is built using a modern full-stack architecture:
 - Google Gemini API
 - GSAP (animations)
 - Motion (UI transitions)
-- pdf-parse (resume parsing)
-- mammoth (DOCX parsing)
-
----
-
-## Key Engineering Highlights
-
-- Role-based access control using Supabase Row Level Security (RLS)
-- AI-powered placement readiness scoring system
-- Deterministic evaluation engine for consistent results
-- Hybrid offline fallback system using local JSON storage
-- Server Actions for secure backend workflows
-- Modular resume parsing system (PDF and DOCX support)
-- Scalable App Router-based architecture
-- Real-time progress tracking system
+- pdf-parse
+- mammoth
 
 ---
 
 ## Architecture Flow
 
-1. Student data is collected via dashboards and checklists  
-2. Deterministic engine calculates category-wise scores  
-3. Supabase stores user progress and metadata securely  
-4. Gemini API generates AI-based insights and roadmaps  
-5. Mentor feedback is integrated into student profiles  
-6. Admin monitors system-wide analytics and user activity  
+1. Student data collected via dashboard checklists  
+2. Deterministic engine calculates category scores  
+3. Supabase stores structured user data  
+4. Gemini generates AI insights and roadmap  
+5. Mentor feedback is integrated into profiles  
+6. Admin monitors system-wide analytics  
 
 ---
 
 ## Deployment
 
-Placement Compass is fully deployed and production-ready.
+- Hosted on Vercel  
+- Supabase backend (PostgreSQL + Auth)  
+- External APIs: GitHub + Gemini  
 
-- Hosted on Vercel
-- Supabase backend (PostgreSQL + Auth)
-- External API integrations (GitHub, Gemini)
-
-No local installation is required — access directly via live URL.
+No installation required — use live link above.
 
 ---
 
 ## Environment Variables
 
-The system internally uses:
-
-- Supabase project credentials
-- Google Gemini API key
-- GitHub API token (for profile analysis)
-- Application URL configuration
+- Supabase project credentials  
+- Supabase anon + service keys  
+- Google Gemini API key  
+- GitHub token (for profile analysis)  
+- App URL configuration  
 
 ---
 
 ## Contributors
 
-Ajay S A — Cyberbeerus  
-GitHub: https://github.com/Cyberbeerus  
-Email: ajayakshay705@gmail.com  
-LinkedIn: https://www.linkedin.com/in/ajay-s-a-281208359  
+### Ajay S A
 
-Akshay S A — Akshaysa11  
-GitHub: https://github.com/Akshaysa11  
-Email: akshaysajay949@gmail.com  
-LinkedIn: https://www.linkedin.com/in/akshay-s-a-260230329  
+[![GitHub](https://img.shields.io/badge/GitHub-Cyberbeerus-black?logo=github)](https://github.com/Cyberbeerus)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?logo=linkedin)](https://www.linkedin.com/in/ajay-s-a-281208359)
+[![Email](https://img.shields.io/badge/Email-Contact-red?logo=gmail)](mailto:ajayakshay705@gmail.com)
 
-Asana S — Asansafi1179  
-GitHub: https://github.com/Asansafi1179  
-Email: asansafi1179@gmail.com  
-LinkedIn: https://www.linkedin.com/in/asana-s-a81342333  
+---
 
-Abhi S Aji — abhi-s-aji  
-GitHub: https://github.com/abhi-s-aji  
-Email: abhisajieden@gmail.com  
-LinkedIn: https://www.linkedin.com/in/abhi-s-aji-008445267  
+### Akshay S A
+
+[![GitHub](https://img.shields.io/badge/GitHub-Akshaysa11-black?logo=github)](https://github.com/Akshaysa11)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?logo=linkedin)](https://www.linkedin.com/in/akshay-s-a-260230329)
+[![Email](https://img.shields.io/badge/Email-Contact-red?logo=gmail)](mailto:akshaysajay949@gmail.com)
+
+---
+
+### Asana S
+
+[![GitHub](https://img.shields.io/badge/GitHub-Asansafi1179-black?logo=github)](https://github.com/Asansafi1179)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?logo=linkedin)](https://www.linkedin.com/in/asana-s-a81342333)
+[![Email](https://img.shields.io/badge/Email-Contact-red?logo=gmail)](mailto:asansafi1179@gmail.com)
+
+---
+
+### Abhi S Aji
+
+[![GitHub](https://img.shields.io/badge/GitHub-abhi--s--aji-black?logo=github)](https://github.com/abhi-s-aji)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?logo=linkedin)](https://www.linkedin.com/in/abhi-s-aji-008445267)
+[![Email](https://img.shields.io/badge/Email-Contact-red?logo=gmail)](mailto:abhisajieden@gmail.com)
 
 ---
 
