@@ -199,7 +199,7 @@ No installation required — use live link above.
 ### Abhi S Aji
 
 [![GitHub](https://img.shields.io/badge/GitHub-abhi--s--aji-black?logo=github)](https://github.com/abhi-s-aji)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?logo=linkedin)](https://www.linkedin.com/in/abhi-s-aji-008445267)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?logo=linkedin)](https://www.linkedin.com/in/abhi-s-aji-eden)
 [![Email](https://img.shields.io/badge/Email-Contact-red?logo=gmail)](mailto:abhisajieden@gmail.com)
 
 ---
